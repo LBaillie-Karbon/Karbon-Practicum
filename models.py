@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, recall_score, mean_squared_error
+from sklearn.metrics import accuracy_score, recall_score, mean_squared_error, confusion_matrix
 import pandas as pd
 import numpy as np
 import logging
@@ -49,15 +49,23 @@ def train_model(models: dict, metrics: dict, data_X: pd.DataFrame, data_Y: pd.Da
         try:
             trained_model = model.fit(X_train, y_train)
             trained_model_y = trained_model.predict(X_test)
-            trained_models.append([model_name, trained_model])
+            trained_models.append([model_name, trained_model, trained_model_y])
             for metric_name, metric in metrics.items():
                 df.at[model_name, metric_name] = metric(y_test, trained_model_y)
+            #log_confusion_matrix(model_name=model_name, y_true=y_test, y_pred=trained_model_y)
         except:
             logging.exception("")
+    
 
-    return df, pd.DataFrame(trained_models)
+    return df, pd.DataFrame(trained_models, columns=['Model Name', 'Trained Model', 'Predictions'])
 
 def select_optimal_model(trained_models:pd.DataFrame, scores: pd.DataFrame, metric:str, metric_dir: int):
+    ################################################
+    # Optimal Model = DF
+    #                   Model Name
+    #                   Trained Model
+    #                   Predictions on Test
+    ################################################
     logging.info(F"Beginning to find optimal model")
     try:
         if metric_dir == 1:
@@ -67,10 +75,21 @@ def select_optimal_model(trained_models:pd.DataFrame, scores: pd.DataFrame, metr
     except:
         logging.exception('')
 
-    return trained_models[Best_model]
+    logging.info(trained_models)
+    logging.info(F"The optimal model was {trained_models['Model Name'].loc[Best_model]}")
+    return trained_models.loc[Best_model]
+
+
+def log_confusion_matrix(model_name:str, y_true:pd.Series, y_pred:pd.Series):
+    #      LOG THE CONFUSION MATRIX
+    logging.info(F"Below is the confusion matrix for {model_name}")
+    logging.info(confusion_matrix(y_true=y_true, y_pred=y_pred))
+    pass
 
 df_train = read_training_data()
 df_scores, trained_models = train_model(models=models, metrics= metrics, data_X= df_train.iloc[:,:-1], data_Y= df_train.iloc[:,-1:])
 optimal_model = select_optimal_model(scores= df_scores, trained_models= trained_models, metric= 'MSE', metric_dir=0)
+
+
 
 

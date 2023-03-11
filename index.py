@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from .models import train_model
+from models import train_model
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
