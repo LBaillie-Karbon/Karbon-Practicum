@@ -18,7 +18,7 @@ logging.info("Starting training script")
 def read_training_data() -> pd.DataFrame:
     logging.info("Reading training data")
     try:
-        return pd.read_csv("Training_Data2.csv")
+        return pd.read_csv("Training_Data3.csv")
     except:
         logging.debug("Failed to read training data")
         logging.exception("")
@@ -50,17 +50,6 @@ def split_training_data(
     )
 
 
-def run_model():
-    df_scores, trained_model = train_model(
-        models=models,
-        metrics=metrics,
-        data_X=df_train.iloc[:, :-1],
-        data_Y=df_train.iloc[:, -1:],
-    )
-
-    return df_scores, train_model
-
-
 def train_model(
     models: dict, metrics: dict, data_X: pd.DataFrame, data_Y: pd.DataFrame
 ):
@@ -69,6 +58,7 @@ def train_model(
     X_train, X_test, y_train, y_test = split_training_data(
         data_X, data_Y, test_size=0.3, rand_state=1
     )
+    
     for model_name, model in models.items():
         logging.info(f"Starting to train the {model_name} model")
         try:
@@ -117,14 +107,22 @@ def log_confusion_matrix(model_name: str, y_true: pd.Series, y_pred: pd.Series):
     logging.info(confusion_matrix(y_true=y_true, y_pred=y_pred))
     pass
 
-
-df_train = read_training_data()
-df_scores, trained_models = train_model(
-    models=models,
-    metrics=metrics,
-    data_X=df_train.iloc[:, :-1],
-    data_Y=df_train.iloc[:, -1:],
-)
-optimal_model = select_optimal_model(
+def run_model():
+    df_train = read_training_data()
+    df_ids = df_train[['TenantPermaKey', 'EmailMessagePermaKey']]
+    df_train = df_train.drop(['TenantPermaKey','EmailMessagePermaKey'] , axis=1)
+    df_scores, trained_models = train_model(
+        models=models,
+        metrics=metrics,
+        data_X=df_train.iloc[:, :-1],
+        data_Y=df_train.iloc[:, -1:],
+    )
+    optimal_model = select_optimal_model(
     scores=df_scores, trained_models=trained_models, metric="MSE", metric_dir=0
-)
+    )
+    df_train = df_train.drop('Label', axis=1)
+    df_train['Prediction'] = optimal_model['Trained Model'].predict(df_train)
+    df_train = pd.merge(df_ids, df_train, left_index=True, right_index=True)
+    return df_train
+
+run_model()
